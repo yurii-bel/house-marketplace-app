@@ -18,8 +18,8 @@ const Profile = () => {
 
   return (
     <div className="profile">
-      <header className="profile-header">
-        <p className="page-header">My Profile</p>
+      <header className="profileHeader">
+        <p className="pageHeader">My Profile</p>
         <button type="button" className="logOut" onClick={onLogout}>
           Logout
         </button>
