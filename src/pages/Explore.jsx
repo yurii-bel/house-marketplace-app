@@ -1,9 +1,8 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import rentCategoryImage from "../assets/jpg/rentCategoryImage.jpg";
 import sellCategoryImage from "../assets/jpg/sellCategoryImage.jpg";
 
-const Explore = () => {
+function Explore() {
   return (
     <div className="explore">
       <header>
@@ -11,7 +10,7 @@ const Explore = () => {
       </header>
 
       <main>
-        {/* Slider */}
+        {/* <Slider /> */}
 
         <p className="exploreCategoryHeading">Categories</p>
         <div className="exploreCategories">
@@ -21,20 +20,20 @@ const Explore = () => {
               alt="rent"
               className="exploreCategoryImg"
             />
+            <p className="exploreCategoryName">Places for rent</p>
           </Link>
-          <p className="exploreCategoryName">Places for rent</p>
           <Link to="/category/sale">
             <img
               src={sellCategoryImage}
               alt="sell"
               className="exploreCategoryImg"
             />
+            <p className="exploreCategoryName">Places for sale</p>
           </Link>
-          <p className="exploreCategoryName">Places for sale</p>
         </div>
       </main>
     </div>
   );
-};
+}
 
 export default Explore;
