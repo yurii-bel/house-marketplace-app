@@ -6,14 +6,16 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from "firebase/storage";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase.config";
 import { useNavigate } from "react-router-dom";
-import Spinner from "../components/Spinner";
-import { v4 as uuidv4 } from "uuid";
 import { toast } from "react-toastify";
+import { v4 as uuidv4 } from "uuid";
+import Spinner from "../components/Spinner";
 
-const CreateListing = () => {
-  const [geolocationEnabled, setGeolactionEnabled] = useState(true);
+function CreateListing() {
+  // eslint-disable-next-line
+  const [geolocationEnabled, setGeolocationEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     type: "rent",
@@ -27,7 +29,7 @@ const CreateListing = () => {
     regularPrice: 0,
     discountedPrice: 0,
     images: {},
-    latitide: 0,
+    latitude: 0,
     longitude: 0,
   });
 
@@ -62,7 +64,9 @@ const CreateListing = () => {
       });
     }
 
-    return () => (isMounted.current = false);
+    return () => {
+      isMounted.current = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted]);
 
@@ -92,11 +96,23 @@ const CreateListing = () => {
       );
 
       const data = await response.json();
-      console.log(data);
+
+      geolocation.lat = data.results[0]?.geometry.location.lat ?? 0;
+      geolocation.lng = data.results[0]?.geometry.location.lng ?? 0;
+
+      location =
+        data.status === "ZERO_RESULTS"
+          ? undefined
+          : data.results[0]?.formatted_address;
+
+      if (location === undefined || location.includes("undefined")) {
+        setLoading(false);
+        toast.error("Please enter a correct address");
+        return;
+      }
     } else {
       geolocation.lat = latitude;
       geolocation.lng = longitude;
-      location = address;
     }
 
     // Store image in firebase
@@ -106,6 +122,7 @@ const CreateListing = () => {
         const fileName = `${auth.currentUser.uid}-${image.name}-${uuidv4()}`;
 
         const storageRef = ref(storage, "images/" + fileName);
+
         const uploadTask = uploadBytesResumable(storageRef, image);
 
         uploadTask.on(
@@ -121,19 +138,16 @@ const CreateListing = () => {
               case "running":
                 console.log("Upload is running");
                 break;
+              default:
+                break;
             }
           },
           (error) => {
-            switch (error.code) {
-              case "storage/unauthorized":
-                break;
-              case "storage/canceled":
-                break;
-              case "storage/unknown":
-                break;
-            }
+            reject(error);
           },
           () => {
+            // Handle successful uploads on complete
+            // For instance, get the download URL: https://firebasestorage.googleapis.com/...
             getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
               resolve(downloadURL);
             });
@@ -142,7 +156,7 @@ const CreateListing = () => {
       });
     };
 
-    const imageUrls = await Promise.all(
+    const imgUrls = await Promise.all(
       [...images].map((image) => storeImage(image))
     ).catch(() => {
       setLoading(false);
@@ -150,9 +164,22 @@ const CreateListing = () => {
       return;
     });
 
-    console.log(imageUrls);
+    const formDataCopy = {
+      ...formData,
+      imgUrls,
+      geolocation,
+      timestamp: serverTimestamp(),
+    };
 
+    formDataCopy.location = address;
+    delete formDataCopy.images;
+    delete formDataCopy.address;
+    !formDataCopy.offer && delete formDataCopy.discountedPrice;
+
+    const docRef = await addDoc(collection(db, "listings"), formDataCopy);
     setLoading(false);
+    toast.success("Listing saved");
+    navigate(`/category/${formDataCopy.type}/${docRef.id}`);
   };
 
   const onMutate = (e) => {
@@ -167,16 +194,16 @@ const CreateListing = () => {
 
     // Files
     if (e.target.files) {
-      setFormData((prev) => ({
-        ...prev,
+      setFormData((prevState) => ({
+        ...prevState,
         images: e.target.files,
       }));
     }
 
     // Text/Booleans/Numbers
     if (!e.target.files) {
-      setFormData((prev) => ({
-        ...prev,
+      setFormData((prevState) => ({
+        ...prevState,
         [e.target.id]: boolean ?? e.target.value,
       }));
     }
@@ -320,7 +347,7 @@ const CreateListing = () => {
           />
 
           {!geolocationEnabled && (
-            <div className="formLatLng">
+            <div className="formLatLng flex">
               <div>
                 <label className="formLabel">Latitude</label>
                 <input
@@ -422,6 +449,6 @@ const CreateListing = () => {
       </main>
     </div>
   );
-};
+}
 
 export default CreateListing;
