@@ -41,7 +41,6 @@ const Category = () => {
         const listings = [];
 
         querySnap.forEach((doc) => {
-          console.log("Listing Data:", doc.data().name);
           return listings.push({
             id: doc.id,
             data: doc.data(),
